@@ -1,0 +1,5 @@
+# Entornos y secretos
+.env
+__pycache__/
+logs/
+data/

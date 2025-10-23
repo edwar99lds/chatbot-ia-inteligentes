@@ -1,0 +1,23 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    container_name: chatbot_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./logs:/app/logs
+    env_file:
+      - .env
+
+  ui:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: chatbot_ui
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
