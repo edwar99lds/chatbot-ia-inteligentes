@@ -1,12 +1,22 @@
-# backend/main.py
+# ===========================================
+# 🧠 Backend del ChatBot IA – Universidad de Caldas
+# Autor: Edwar Marín
+# Rol: Infraestructura & MLOps
+# ===========================================
+
 from fastapi import FastAPI
 from pydantic import BaseModel
-import time  # ⏱ Para medir latencia
-from utils.logger import log_interaction  # 📊 Importa el registrador de métricas
-from dotenv import load_dotenv
+import time
 import os
+from dotenv import load_dotenv
 
-# --- Cargar variables de entorno ---
+# --- Importaciones locales ---
+from utils.logger import log_interaction   # 📊 Registro de métricas
+from src.rag_pipeline import get_rag_chain          # 🔗 Pipeline RAG real
+
+# =====================================================
+# 🔹 Cargar variables de entorno
+# =====================================================
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -14,68 +24,94 @@ DB_PATH = os.getenv("DB_PATH", "data/vectorstore")
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
 if DEBUG:
-    print(f"🔐 OPENAI_API_KEY: {OPENAI_API_KEY[:5]}******")
+    print(f"🔐 OPENAI_API_KEY: {OPENAI_API_KEY[:5]}******" if OPENAI_API_KEY else "🔐 No hay API Key configurada.")
     print(f"🗂️ DB_PATH: {DB_PATH}")
     print(f"🐞 DEBUG mode: {DEBUG}")
 
+# =====================================================
+# 🔹 Inicializar FastAPI
+# =====================================================
 app = FastAPI(
     title="ChatBot IA - Backend",
-    description="Backend para ChatBot académico sobre IA",
+    description="Backend para ChatBot académico sobre Inteligencia Artificial",
     version="1.0"
 )
 
-# Modelo de datos para la petición
+# =====================================================
+# 🔹 Inicializar el pipeline RAG
+# =====================================================
+print("🧠 Inicializando pipeline RAG...")
+rag_chain = get_rag_chain()
+print("✅ RAG cargado y listo.")
+
+# =====================================================
+# 🔹 Modelos de datos
+# =====================================================
 class QueryRequest(BaseModel):
     question: str
     mode: str  # "breve" o "extendido"
 
+# =====================================================
+# 🔹 Rutas del backend
+# =====================================================
 
-# Ruta principal (saludo)
 @app.get("/")
 def read_root():
+    """Ruta de prueba del servidor."""
     return {"message": "Bienvenido al backend del ChatBot de IA - Universidad de Caldas"}
 
 
-# Ruta de consulta
 @app.post("/query")
 def get_answer(request: QueryRequest):
     """
-    Responde con un texto simulado y un par de citas de ejemplo.
-    Luego aquí se integrará el pipeline RAG real.
-    También registra métricas de uso (anonimizadas).
+    Responde a la pregunta del usuario usando el pipeline RAG.
+    Registra métricas de latencia y uso en logs/metrics.jsonl
     """
-    start_time = time.time()  # Inicia el contador de latencia
+    start_time = time.time()
 
-    # --- Simulación de respuesta (dummy) ---
-    answer_text = (
-        f"Hola 👋, soy el backend del ChatBot IA. "
-        f"Tu pregunta fue: '{request.question}'. "
-        f"Estoy en modo '{request.mode}'."
-    )
+    try:
+        # --- Ejecutar el pipeline RAG ---
+        print(f"🤖 Pregunta recibida: {request.question}")
+        answer_text = rag_chain(request.question)
+        latency = time.time() - start_time
 
-    citations = [
-        "UNESCO - Informe de Ética en IA 2023",
-        "AI Act - Regulación Europea de IA 2024"
-    ]
+        # --- Citas simuladas (puedes sustituirlas si tu RAG las genera) ---
+        citations = ["Base vectorial académica - Universidad de Caldas"]
 
-    # --- Cálculo de métricas ---
-    latency = time.time() - start_time  # Latencia en segundos
-    cost = 0.0003  # 💰 costo simbólico (simulación de uso de modelo)
-    model_name = "mock-model-v1"
+        # --- Registrar métricas ---
+        log_interaction(
+            question=request.question,
+            model="RAG (OpenAI + FLAN-T5)",
+            latency=latency,
+            cost=0.0  # sin costo real por ahora
+        )
 
-    # --- Registro en logs ---
-    log_interaction(
-        question=request.question,
-        model=model_name,
-        latency=latency,
-        cost=cost
-    )
+        return {
+            "answer": answer_text,
+            "citations": citations
+        }
 
-    # --- Respuesta ---
-    return {
-        "answer": answer_text,
-        "citations": citations
-    }
+    except Exception as e:
+        print(f"❌ Error en RAG: {e}")
+        return {
+            "answer": f"[Error interno del RAG: {str(e)}]",
+            "citations": []
+        }
+
+# =====================================================
+# 🧩 Instrucciones de ejecución
+# =====================================================
+# Modo desarrollo:
+#   python -m uvicorn backend.main:app --reload --port 8000
+#
+# Docker:
+#   docker compose up --build
+#
+# Logs:
+#   Se guardan en logs/metrics.jsonl
+#
+# =====================================================
+
 
 # Backend - Terminal de visual
 # python -m uvicorn backend.main:app --reload --port 8000
