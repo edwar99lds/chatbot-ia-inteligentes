@@ -1,23 +1,31 @@
+version: "3.9"
+
 services:
   api:
     build:
-      context: .
+      context: .                    # ✅ usa todo el proyecto (no solo /backend)
       dockerfile: ./backend/Dockerfile
     container_name: chatbot_api
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      - .:/app                      # ✅ te permite editar código sin rebuild
       - ./logs:/app/logs
     env_file:
       - .env
+    environment:
+      - PYTHONPATH=/app             # ✅ asegura que backend, src, utils sean visibles
+    restart: always
 
   ui:
     build:
-      context: .
-      dockerfile: ./Dockerfile
+      context: .                    # ✅ contexto raíz del proyecto
+      dockerfile: ./Dockerfile      # ✅ o ./frontend/Dockerfile si lo tienes allí
     container_name: chatbot_ui
     ports:
       - "8501:8501"
     depends_on:
       - api
+    environment:
+      - API_URL=http://api:8000/query  # ✅ comunicación interna entre contenedores
+    restart: always

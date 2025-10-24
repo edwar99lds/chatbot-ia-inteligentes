@@ -1,18 +1,22 @@
-# backend/Dockerfile
-FROM python:3.11
+# === Backend ===
+FROM python:3.11-slim
 
-# Carpeta de trabajo dentro del contenedor
 WORKDIR /app
 
-# Copiamos los archivos del backend y el requirements
-COPY ./backend /app
-COPY requirements.txt .
+# Copiar dependencias del proyecto principal
+COPY requirements.txt /app/requirements.txt
 
-# Instalamos dependencias
-RUN pip install --no-cache-dir -r requirements.txt
+# Instalar dependencias
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Exponemos el puerto 8000
+# Copiar TODO el proyecto (backend, src, utils, etc.)
+COPY . /app
+
+# Asegurar que el backend sea accesible desde cualquier módulo
+ENV PYTHONPATH="/app"
+
+# Exponer el puerto del backend
 EXPOSE 8000
 
-# Comando por defecto para correr la API
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Comando de arranque de FastAPI
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
