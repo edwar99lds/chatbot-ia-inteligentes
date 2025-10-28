@@ -7,7 +7,15 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough, RunnableParallel
 from langchain_core.output_parsers import StrOutputParser
 from openai import OpenAI, AuthenticationError, RateLimitError
+
+import re
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 import torch
+
+# Importa la función para construir la base vectorial
+from src.build_vectorstore import build_vectorstore
+
 
 load_dotenv()
 
@@ -68,6 +76,16 @@ def get_llm(force_local=False):
 # =====================================================
 def get_rag_chain():
     """Crea el pipeline RAG con embeddings y retrieval."""
+
+    print("🔹 Verificando base vectorial...")
+
+    db_dir = "data/chroma_db"
+    if not os.path.exists(db_dir) or not os.listdir(db_dir):
+        print("⚠️ No se encontró base vectorial. Construyendo una nueva...")
+        build_vectorstore()
+    else:
+        print("✅ Base vectorial encontrada y lista.")
+
     print("🔹 Cargando base vectorial...")
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     vectordb = Chroma(persist_directory="data/chroma_db", embedding_function=embeddings)
@@ -107,7 +125,7 @@ Respuesta:"""
             local_llm = get_llm(force_local=True)
             context_docs = retriever.invoke(question)
             context = "\n\n".join([d.page_content for d in context_docs])
-            context = context[:1500]  # Limita el contexto a 1500 caracteres (~400 tokens)
+            context = context[:700]  # Limita el contexto a 1500 caracteres (~400 tokens)
             prompt_text = prompt.format(context=context, question=question)
             return local_llm.invoke(prompt_text)
 
@@ -115,6 +133,38 @@ Respuesta:"""
             return f"[Error al procesar la pregunta: {e}]"
 
     return safe_invoke
+
+
+# =====================================================
+# 🔹 Preprocesamiento y división de documentos
+# =====================================================
+
+def preprocess_text(text: str) -> str:
+    """Limpia texto eliminando ruido, espacios extra y etiquetas HTML."""
+    text = re.sub(r"<[^>]+>", " ", text)  # Elimina HTML
+    text = re.sub(r"\s+", " ", text)  # Normaliza espacios
+    text = text.replace("\n", " ").replace("\r", " ")
+    text = text.strip()
+    return text
+
+
+def split_documents(docs):
+    """Divide los documentos en fragmentos (chunks) limpios."""
+    cleaned_docs = [preprocess_text(doc) for doc in docs]
+
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=800,  # tamaño de cada fragmento
+        chunk_overlap=100,  # solapamiento entre fragmentos
+        separators=["\n\n", "\n", ".", "!", "?", " ", ""]
+    )
+
+    chunks = []
+    for doc in cleaned_docs:
+        parts = splitter.split_text(doc)
+        chunks.extend(parts)
+
+    return chunks
+
 
 # =====================================================
 # 🔹 Prueba directa del pipeline
