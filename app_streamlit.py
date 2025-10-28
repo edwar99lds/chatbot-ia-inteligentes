@@ -79,8 +79,8 @@ st.sidebar.header("ℹ️ Información")
 st.sidebar.info(
     """
     **Proyecto académico** desarrollado por:
-    - Heidy 🧩  
-    - Julián 💡  
+    - Heidy 🧩  *(Líder contenido/UX - Contexto & UX)*
+    - Julián 💡  *(Líder evaluación - LLM & Evaluación)*
     - Edwar ⚙️ *(Líder técnico - Infra & MLOps)*  
 
     ---

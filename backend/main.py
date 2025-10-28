@@ -140,3 +140,6 @@ def get_answer(request: QueryRequest):
 
 
 # pip freeze > requirements.txt
+
+# eliminar base vectorial cuando se tenga archivos nuevos
+# Remove-Item -Recurse -Force data\chroma_db
