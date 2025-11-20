@@ -6,16 +6,64 @@ import time
 st.set_page_config(
     page_title="ChatBot IA - Universidad de Caldas",
     page_icon="🤖",
-    layout="centered"
+    layout="wide"
 )
 
-API_URL = "http://api:8000/query"  # Backend del contenedor Docker
+API_URL = "http://api:8000/query"
+
+# --- CSS personalizado ---
+st.markdown("""
+<style>
+
+    /* ==== SIDEBAR - fondo azul oscuro + texto blanco ==== */
+    [data-testid="stSidebar"] {
+        background-color: #1E3A5F !important;
+    }
+
+    [data-testid="stSidebar"] * {
+        color: white !important;
+    }
+
+    /* Aumentar margen superior del contenido del sidebar */
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: 30px !important;
+    }
+
+    /* ==== PANEL PRINCIPAL ==== */
+    .main-title {
+        color: #1E3A5F !important;
+        text-align: center;
+        font-weight: 800 !important;
+        margin-top: -40px !important;
+        margin-bottom: 5px !important;
+    }
+
+    .main-subtitle {
+        color: #000000 !important;
+        text-align: center;
+        font-size: 18px;
+        margin-top: -10px !important;
+        margin-bottom: 25px !important;
+    }
+
+    /* Subir todo el contenedor de interacción */
+    .block-container {
+        padding-top: 10px !important;
+    }
+
+</style>
+""", unsafe_allow_html=True)
+
 
 # --- Encabezado principal ---
 st.markdown(
+    "<h1 class='main-title'>🤖 ChatBot IA - Universidad de Caldas</h1>",
+    unsafe_allow_html=True
+)
+
+st.markdown(
     """
-    <h1 style='text-align: center; color: #3A9AD9;'>🤖 ChatBot IA - Universidad de Caldas</h1>
-    <p style='text-align: center; color: #374151;'>
+    <p class='main-subtitle'>
         Aprende sobre <b>Inteligencia Artificial</b> con un asistente académico.  
         Pregunta sobre <i>conceptos, historia, aprendizaje automático, ética o regulaciones.</i>
     </p>
@@ -23,18 +71,18 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- Contenedor principal tipo chat ---
+# --- Historial session ---
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# --- Selector de modo ---
+# --- Input y modo ---
 col1, col2 = st.columns([3, 1])
 with col1:
     question = st.text_input("💬 Escribe tu pregunta:")
 with col2:
     mode = st.selectbox("Modo", ["breve", "extendido"])
 
-# --- Botón de envío ---
+# --- Botón enviar ---
 if st.button("🚀 Enviar pregunta"):
     if not question.strip():
         st.warning("Por favor, escribe una pregunta.")
@@ -54,7 +102,8 @@ if st.button("🚀 Enviar pregunta"):
                         "question": question,
                         "answer": answer,
                         "citations": citations,
-                        "latency": latency
+                        "latency": latency,
+                        "mode": mode
                     })
                 else:
                     st.error(f"❌ Error del servidor ({response.status_code})")
@@ -64,17 +113,17 @@ if st.button("🚀 Enviar pregunta"):
 # --- Mostrar historial ---
 if st.session_state.history:
     st.markdown("## 💬 Historial de conversación")
-    for i, item in enumerate(reversed(st.session_state.history)):
+    for item in reversed(st.session_state.history):
         st.markdown(f"**🧑‍🎓 Tú:** {item['question']}")
         st.markdown(f"**🤖 ChatBot:** {item['answer']}")
-        st.caption(f"⏱️ {item['latency']} s | Modo: {mode}")
+        st.caption(f"⏱️ {item['latency']} s | Modo: {item['mode']}")
         if item["citations"]:
             with st.expander("📚 Fuentes citadas"):
                 for c in item["citations"]:
                     st.markdown(f"- {c}")
         st.markdown("---")
 
-# --- Barra lateral ---
+# --- Sidebar ---
 st.sidebar.header("ℹ️ Información")
 st.sidebar.info(
     """
